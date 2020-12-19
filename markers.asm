@@ -14,13 +14,14 @@
 res:	.space 2
 image:	.space BMP_FILE_SIZE
 
-info:	.asciiz "Wspolrzedne punktu P:\n"
+info:	.asciiz "\nWspolrzedne punktu P:\n"
 
 x_info:	.asciiz "X: "
 
-y_info:	.asciiz "Y: "
 
-fname:	.asciiz "mymarkers.bmp"
+y_info:	.asciiz "\nY: "
+
+fname:	.asciiz "markers.bmp"
 	.text
 	
 
@@ -104,6 +105,7 @@ check_thick_right:
 	jal get_pixel
 	beqz $v0, check_thick_right	#if pixel above is black continue
 	sub $t5, $a1, $t9		#if not then calculate thickness of right arm
+	sub $t5, $t5, 1			#-1 to correct
 	j pre_thick_top	
 	
 pre_thick_top:
@@ -119,7 +121,7 @@ check_thick_top:
 	beqz $v0, check_thick_top	#if the next pixel is black continue
 	
 	sub $t4, $a0, $t8		#if not then calculate thickness of top arm
-	
+	sub $t4, $t4, 1			#-1 to correct
 	beq $t4, $t5, pre_check_inside	#if thickness of right and top arm are equal proceed to checking inside
 	j pre_loop_x_clean		#if not then go back to the loop_x
 
@@ -128,8 +130,9 @@ pre_check_inside:
 	la $a1, ($t9)			#restore y
 	add $t4, $t4, $a0		#x coordinate of top right vertex
 	add $t5, $t5, $a1		#y coordinate of top of right arm vertex
-	add $t6, $t6, $a0		#x coordinate of bottom right vertex
-	add $t7, $t7, $a1		#y coordinate of top left vertex
+	
+	add $t6, $t6, $a1		#y coordinate of top left vertex
+	add $t7, $t7, $a0		#x coordinate of bottom right vertex
 	j check_inside_x
 
 check_inside_x:
@@ -140,7 +143,7 @@ check_inside_x:
 	j check_inside_x
 	
 check_inside_y:
-	bgt $a1, $t5, pre_check_inside_x_2	#top of the right arm, proceed to checking the upper arm
+	beq $a1, $t5, pre_check_inside_x_2	#top of the right arm, proceed to checking the upper arm
 	addi $a1, $a1, 1		#increment y
 	la $a0, ($t8)			#reset x
 	j check_inside_x		#proceed to checking the next row
@@ -148,19 +151,18 @@ check_inside_y:
 pre_check_inside_x_2:
 	la $a0, ($t8)			#restore x
 	la $a1, ($t5)			#set y to the height of thickness of right arm
-	addi $a1, $a1, 1 		#set y to one above
 	j check_inside_x_2
 	
 	
 check_inside_x_2:
-	beq $a0, $t4, check_inside_y_2	#if end of the row go to the line above
+	bgt $a0, $t4, check_inside_y_2	#if end of the row go to the line above
 	jal get_pixel	
 	bnez $v0, pre_loop_x_clean	#if white detected then go back to loop_x
 	addi $a0, $a0, 1		#increment x
 	j check_inside_x_2
 	
 check_inside_y_2:
-	beq $a1, $t5, pre_check_outside	#top of the right arm, proceed to checking the outside
+	beq $a1, $t6, pre_check_outside	#top of the right arm, proceed to checking the outside
 	addi $a1, $a1, 1		#increment y
 	la $a0, ($t8)			#reset x
 	j check_inside_x_2		#proceed to checking the next row
@@ -180,7 +182,7 @@ pre_check_bottom:
 					#if tag touches one of the borders of image then don't check that border
 					
 	beq $a1, 0, pre_check_right	#no bottom
-	sub $a0, $a0, 1			#move below P
+	sub $a1, $a1, 1			#move below P
 	
 			
 	j check_bottom
@@ -212,12 +214,16 @@ pre_check_inner_top:
 	j check_inner_top
 	
 check_inner_top:
-	beq $a0, $t4, check_inner_right	#end of checking, proceed to next border
+	beq $a0, $t4, pre_check_inner_right	#end of checking, proceed to next border
 	jal get_pixel
 	beqz $v0, pre_loop_x_clean	#if black pixel found then not a tag, go back to loop_x
 	sub $a0, $a0, 1			
 	j check_inner_top
 
+pre_check_inner_right:
+	la $a0, ($s4)			#set x to thick_top_arm + 1
+	j check_inner_right
+	
 check_inner_right:
 	beq $a1, $t6, pre_check_top
 	jal get_pixel
@@ -260,13 +266,26 @@ tag_found:
 	la $a0, x_info
 	syscall
 	
+	li $v0, 1
 	la $a0, ($t8)
 	syscall 
 	
+	
+	
+	li $v0, 4
 	la $a0, y_info
 	syscall
+
 	
+	li $v0, 1
 	la $a0, ($t9)
+	
+	#display y coordinate if we assume (0,0) is in the top left corner:
+	sub $a0, $a0, 240
+	add $a0, $a0, 1 	#+1 to correct submtion
+	subu $a0, $zero, $a0
+	#end of change dispaly
+	
 	syscall
 	
 	j pre_loop_x_clean
