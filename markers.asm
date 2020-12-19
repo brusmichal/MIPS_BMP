@@ -281,6 +281,7 @@ tag_found:
 	la $a0, ($t9)
 	
 	#display y coordinate if we assume (0,0) is in the top left corner:
+	#comment below code if you want (0,0) to be in the bottom left corner
 	sub $a0, $a0, 240
 	add $a0, $a0, 1 	#+1 to correct submtion
 	subu $a0, $zero, $a0
