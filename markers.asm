@@ -36,14 +36,14 @@ main:
 	#li 	$a2, 0x00FF0000	#color - 00RRGGBB
 	#jal	put_pixel
 x_loop:
-	beq $a0, 320, y_loop		#end of line, go to next above
+	beq $a0, 319, y_loop		#end of line, go to next above
 	
 	jal get_pixel		
 	beqz $v0, black_detected
 	addi $a0, $a0, 1		#increment x
 	j x_loop
 y_loop:
-	beq $a1, 240, exit		#top of the picture, end
+	beq $a1, 239, exit		#top of the picture, end
 	addi $a1, $a1, 1		#increment y
 	la $a0, ($zero)			#reset x
 	j x_loop			#proceed to checking the row
@@ -56,7 +56,7 @@ black_detected:
 	
 check_width:
 	addi $a0, $a0, 1		#increment x
-	bgt $a0, 320, calculate_width
+	beq $a0, 320, calculate_width
 	jal get_pixel
 	beqz $v0, check_width		#if the next pixel is black continue
 	
@@ -72,7 +72,7 @@ calculate_width:
 
 check_height:
 	addi $a1, $a1, 1		#increment y
-	bgt $a1, 240, calculate_height
+	beq $a1, 240, calculate_height
 	jal get_pixel
 	beqz $v0, check_height		#if the pixel above is black continue
 	
@@ -94,12 +94,13 @@ pre_loop_x_clean:
 pre_thick_right:
 	la $a0, ($t8)			#restore x
 	la $a1, ($t9)			#restore y
+	bge $a1, 238, pre_loop_x_clean
 	la $t5, ($zero)			#thick_right=0
 	add $a0, $a0, $t7 		#move to the end of bottom bar
 	j check_thick_right
 	
 check_thick_right:
-	
+
 	
 	addi $a1, $a1, 1		#increment y
 	jal get_pixel
@@ -179,13 +180,15 @@ pre_check_bottom:
 	addi $s6, $t6, 1
 	addi $s7, $t7, 1	
 	
-					#if tag touches one of the borders of image then don't check that border
-					
-	beq $a1, 0, pre_check_right	#no bottom
-	sub $a1, $a1, 1			#move below P
+	beq $a1, 0, no_bottom		#no bottom
 	
+	sub $a1, $a1, 1			#move to (x, y-1)
 			
 	j check_bottom
+	
+no_bottom:
+	la $v1, ($zero)			#set flag that there is no bottom
+	j pre_check_right
 	
 check_bottom:
 	bgt $a0, $s7, pre_check_right	#check row below the bottom + 1
@@ -195,7 +198,7 @@ check_bottom:
 	j check_bottom
 
 pre_check_right:
-	beq $t7, 320, pre_check_inner_top	#no right
+	beq $t7, 319, pre_check_inner_top	#no right
 	
 	la $a0, ($s7)			#set x to width + 1
 	la $a1, ($t9)			#restore y		
@@ -232,9 +235,14 @@ check_inner_right:
 	j check_inner_right
 	
 pre_check_top:
-	beq $t6, 240, pre_check_left #no top
+	beq $t6, 239, no_top #no top
 	la $a0, ($t8)
 	la $a1, ($s6)
+	j check_top
+	
+no_top:
+	sub $s6, $s6, 1			#if no top then decrese $s6 in order not to get out ouf range in check_left
+	j pre_check_left
 
 check_top:
 	bgt $a0, $s4, pre_check_left
@@ -247,8 +255,13 @@ pre_check_left:
 	beq $t8, 0, tag_found 	#no left
 	la $a0, ($t8)
 	sub $a0, $a0, 1		
-	la $a1, ($t9)
-	sub $a1, $a1, 1			#move to (x-1, y-1)
+	la $a1, ($t9)		
+	beqz $v1, bottom_flag	#if no bottom then move to (x-1,y)
+	sub $a1, $a1, 1		#if not then move to (x-1, y-1)
+	j check_left
+	
+bottom_flag:
+	li $v1, 1		#reset no_bottom flag
 	j check_left
 	
 check_left:
