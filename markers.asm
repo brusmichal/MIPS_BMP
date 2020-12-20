@@ -1,7 +1,6 @@
 #-------------------------------------------------------------------------------
-#author: Zbigniew Szymanski
-#data : 2018.05.07
-#description : example program for reading, modifying and writing a BMP file 
+#author: Michał Brus
+#description : szukanie znacznika nr 3
 #-------------------------------------------------------------------------------
 
 #only 24-bits 600x50 pixels BMP files are supported
@@ -21,7 +20,7 @@ x_info:	.asciiz "X: "
 
 y_info:	.asciiz "\nY: "
 
-fname:	.asciiz "markers.bmp"
+fname:	.asciiz "markers1.bmp"
 	.text
 	
 
